@@ -122,19 +122,13 @@
       </select>
     </div>
 
-    <div id="projects">
-      <!-- Projekty będą renderowane tutaj -->
-    </div>
+    <div id="projects"></div>
 
     <script>
-      // Prosty demo JSON
       const languageSelect = document.getElementById("language");
       const categorySelect = document.getElementById("category");
       const projectsDiv = document.getElementById("projects");
 
-      const GITHUB_TOKEN = ""; // optional, to avoid rate limits
-
-      // helper to format date 2 weeks ago
       function twoWeeksAgo() {
         const date = new Date();
         date.setDate(date.getDate() - 14);
@@ -157,14 +151,10 @@
         )}&sort=updated&order=desc&per_page=60`;
 
         try {
-          const headers = GITHUB_TOKEN
-            ? { Authorization: `token ${GITHUB_TOKEN}` }
-            : {};
-          const res = await fetch(url, { headers });
+          const res = await fetch(url);
           const data = await res.json();
           const repos = data.items || [];
 
-          // Better category detection
           const categorized = repos.filter((r) => {
             const topics = r.topics || [];
             const desc = (r.description || "").toLowerCase();
@@ -188,7 +178,7 @@
               );
             if (cat === "lib")
               return topics.includes("lib") || desc.includes("lib");
-            if (cat === "any") return true; // library fallback
+            if (cat === "any") return true;
             return true;
           });
 
@@ -200,7 +190,6 @@
             return;
           }
 
-          // Show all 20 most recently updated matching category
           categorized.forEach((latest) => {
             const card = document.createElement("div");
             card.className = "repo-card";
@@ -220,7 +209,6 @@
         }
       }
 
-      // Event listeners
       languageSelect.addEventListener("change", fetchProjects);
       categorySelect.addEventListener("change", fetchProjects);
     </script>
