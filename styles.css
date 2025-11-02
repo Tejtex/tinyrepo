@@ -1,0 +1,70 @@
+/* Podstawowy terminalowy wygląd */
+body {
+  background-color: #000000; /* czarne tło */
+  color: #00ff00; /* zielony tekst */
+  font-family: "Fira Code", "Courier New", monospace; /* monospace font */
+  font-size: 16px;
+  margin: 0;
+  padding: 20px;
+  line-height: 1.4;
+}
+
+/* Efekt przewijania w stylu terminala */
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Blinking cursor */
+@keyframes blink {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+  }
+  25%,
+  75% {
+    opacity: 0;
+  }
+}
+
+.cursor {
+  display: inline-block;
+  width: 8px;
+  background-color: #00ff00;
+  margin-left: 2px;
+  animation: blink 1s infinite;
+}
+
+/* Dodatkowy efekt “flicker” tekstu */
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 255, 0, 0.02);
+  mix-blend-mode: overlay;
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0%,
+  19%,
+  21%,
+  23%,
+  25%,
+  54%,
+  56%,
+  100% {
+    opacity: 0.02;
+  }
+  20%,
+  22%,
+  24%,
+  55% {
+    opacity: 0.05;
+  }
+}

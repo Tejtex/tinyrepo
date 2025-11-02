@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TinyRepo</title>
+    <style>
+      /* --- Podstawowy terminalowy wygląd --- */
+      body {
+        background-color: #000000;
+        color: #00ff00;
+        font-family: "Fira Code", "Courier New", monospace;
+        font-size: 30px;
+        margin: 0;
+        padding: 20px;
+        line-height: 1.4;
+      }
+
+      /* --- Dropdowny stylizowane jak terminal --- */
+      select {
+        background-color: #000;
+        color: #00ff00;
+        border: 1px solid #00ff00;
+        font-family: inherit;
+        font-size: 30px;
+        padding: 4px 8px;
+        margin-right: 10px;
+      }
+
+      /* --- Kontener projektów --- */
+      #projects {
+        margin-top: 20px;
+      }
+
+      .repo-card {
+        border: 1px solid #00ff00;
+        padding: 10px;
+        margin-bottom: 10px;
+        white-space: pre-wrap;
+      }
+
+      /* --- Blinking cursor --- */
+      @keyframes blink {
+        0%,
+        50%,
+        100% {
+          opacity: 1;
+        }
+        25%,
+        75% {
+          opacity: 0;
+        }
+      }
+
+      .cursor {
+        display: inline-block;
+        width: 8px;
+        height: 40px;
+        background-color: #00ff00;
+        margin-left: 2px;
+        margin-bottom: 0;
+        vertical-align: bottom; /* aligns with bottom of text */
+        animation: blink 1s infinite;
+      }
+
+      /* --- Flicker efekt --- */
+      body::after {
+        content: "";
+        pointer-events: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 255, 0, 0.02);
+        mix-blend-mode: overlay;
+        animation: flicker 0.15s infinite;
+      }
+
+      @keyframes flicker {
+        0%,
+        19%,
+        21%,
+        23%,
+        25%,
+        54%,
+        56%,
+        100% {
+          opacity: 0.02;
+        }
+        20%,
+        22%,
+        24%,
+        55% {
+          opacity: 0.05;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <label for="language">> select language:</label>
+      <select id="language">
+        <option value="" disabled selected>Select language</option>
+        <option value="rust">Rust</option>
+        <option value="python">Python</option>
+        <option value="go">Go</option>
+        <option value="js">JavaScript</option>
+        <option value="ts">TypeScript</option>
+        <option value="java">Java</option>
+        <option value="cpp">C++</option>
+      </select>
+      <br />
+      <label for="category">> select category:</label>
+      <select id="category">
+        <option value="" disabled selected>Select category</option>
+        <option value="cli">CLI</option>
+        <option value="web">Web</option>
+        <option value="lib">Library</option>
+        <option value="any">Any</option>
+      </select>
+    </div>
+
+    <div id="projects">
+      <!-- Projekty będą renderowane tutaj -->
+    </div>
+
+    <script>
+      // Prosty demo JSON
+      const languageSelect = document.getElementById("language");
+      const categorySelect = document.getElementById("category");
+      const projectsDiv = document.getElementById("projects");
+
+      const GITHUB_TOKEN = ""; // optional, to avoid rate limits
+
+      // helper to format date 2 weeks ago
+      function twoWeeksAgo() {
+        const date = new Date();
+        date.setDate(date.getDate() - 14);
+        return date.toISOString().split("T")[0];
+      }
+
+      async function fetchProjects() {
+        const lang = languageSelect.value;
+        const cat = categorySelect.value;
+
+        if (!lang || !cat) {
+          projectsDiv.innerHTML =
+            "> please select both language and category <span class='cursor'></span>";
+          return;
+        }
+
+        const query = `language:${lang} stars:10..200 pushed:>${twoWeeksAgo()}`;
+        const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(
+          query
+        )}&sort=updated&order=desc&per_page=60`;
+
+        try {
+          const headers = GITHUB_TOKEN
+            ? { Authorization: `token ${GITHUB_TOKEN}` }
+            : {};
+          const res = await fetch(url, { headers });
+          const data = await res.json();
+          const repos = data.items || [];
+
+          // Better category detection
+          const categorized = repos.filter((r) => {
+            const topics = r.topics || [];
+            const desc = (r.description || "").toLowerCase();
+            if (cat === "cli")
+              return (
+                topics.includes("cli") ||
+                desc.includes("cli") ||
+                topics.includes("tui") ||
+                desc.includes("tui")
+              );
+            if (cat === "web")
+              return (
+                topics.includes("web") ||
+                desc.includes("web") ||
+                topics.includes("server") ||
+                desc.includes("server") ||
+                topics.includes("backend") ||
+                desc.includes("backed") ||
+                topics.includes("frontend") ||
+                desc.includes("frontend")
+              );
+            if (cat === "lib")
+              return topics.includes("lib") || desc.includes("lib");
+            if (cat === "any") return true; // library fallback
+            return true;
+          });
+
+          projectsDiv.innerHTML = "";
+
+          if (categorized.length === 0) {
+            projectsDiv.innerHTML =
+              "> no projects found <span class='cursor'></span>";
+            return;
+          }
+
+          // Show all 20 most recently updated matching category
+          categorized.forEach((latest) => {
+            const card = document.createElement("div");
+            card.className = "repo-card";
+            card.innerHTML = `┌─────────────────────────────┐
+│ name: ${latest.name}
+│ stars: ${latest.stargazers_count}
+│ updated: ${latest.pushed_at.split("T")[0]}
+│ desc: ${latest.description || "no description"}
+│ url: <a href=${latest.html_url}>${latest.html_url}</a>
+└─────────────────────────────┘`;
+            projectsDiv.appendChild(card);
+          });
+        } catch (err) {
+          projectsDiv.innerHTML =
+            "> error fetching data <span class='cursor'></span>";
+          console.error(err);
+        }
+      }
+
+      // Event listeners
+      languageSelect.addEventListener("change", fetchProjects);
+      categorySelect.addEventListener("change", fetchProjects);
+    </script>
+  </body>
+</html>
